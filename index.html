@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>重走红色延安路 · 赓续奋斗爱国魂</title>
+<style>
+  :root{--red:#c62828;--gold:#f2b705;--dark:#2b1b17;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:linear-gradient(160deg,#fff7e6,#ffe0b2);color:#2b1b17;min-height:100vh;}
+  header{text-align:center;padding:28px 16px 8px;}
+  header h1{font-size:24px;color:var(--red);letter-spacing:2px;}
+  header p{font-size:14px;color:#8d6e63;margin-top:6px;}
+  .entries{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:16px;max-width:900px;margin:0 auto;}
+  .card{background:#fff;border:2px solid #ffcc80;border-radius:16px;padding:16px;text-align:center;cursor:pointer;transition:.2s;box-shadow:0 4px 12px rgba(198,40,40,.08);}
+  .card:hover{transform:translateY(-4px);border-color:var(--red);}
+  .card .icon{font-size:30px;}
+  .card h3{font-size:15px;margin:8px 0 4px;color:var(--red);}
+  .card p{font-size:12px;color:#8d6e63;}
+  .game-panel{display:none;max-width:720px;margin:0 auto;padding:16px;}
+  .game-panel.active{display:block;}
+  .btn{background:var(--red);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:14px;cursor:pointer;margin:6px 4px;}
+  .btn.ghost{background:#fff;color:var(--red);border:1px solid var(--red);}
+  .back{margin:10px 16px;display:none;}
+  .poster-mask{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;align-items:center;justify-content:center;flex-direction:column;padding:16px;}
+  .poster-mask.active{display:flex;}
+  .poster-mask canvas{max-width:92vw;max-height:70vh;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.4);}
+  .poster-actions{margin-top:12px;display:flex;gap:10px;}
+  .tip{font-size:12px;color:#8d6e63;margin:6px 0;}
+</style>
+</head>
+<body>
+<header>
+  <h1>重走红色延安路 · 赓续奋斗爱国魂</h1>
+  <p>长征胜利九十载 · 强国复兴青年行</p>
+</header>
+
+<div class="entries" id="entries">
+  <div class="card" onclick="openGame('runner')"><div class="icon">🏃</div><h3>延安路·闯关跑酷</h3><p>答题前进重走延安路</p></div>
+  <div class="card" onclick="openGame('puzzle')"><div class="icon">🧩</div><h3>红色拼图·延安地标</h3><p>九宫格拼出革命旧址</p></div>
+  <div class="card" onclick="openGame('decision')"><div class="icon">🧭</div><h3>青年行·长征决策</h3><p>你的选择决定奋斗值</p></div>
+  <div class="card" onclick="openGame('link')"><div class="icon">🔗</div><h3>星火接力·知识连线</h3><p>事件精神行动三连</p></div>
+  <div class="card" onclick="openGame('lights')"><div class="icon">💡</div><h3>宝塔山点灯</h3><p>限时点亮革命旧址</p></div>
+</div>
+
+<div class="back" id="backBar"><button class="btn ghost" onclick="backHome()">← 返回入口</button></div>
+
+<!-- 1 跑酷 -->
+<div class="game-panel" id="panel-runner">
+  <h2 style="color:#c62828">延安路·闯关跑酷</h2>
+  <p class="tip">答对前进，答错停留。到达终点生成海报。</p>
+  <div id="runnerTrack" style="height:12px;background:#ffe0b2;border-radius:8px;margin:12px 0;position:relative;">
+    <div id="runnerDot" style="width:24px;height:24px;background:#c62828;border-radius:50%;position:absolute;top:-6px;left:0;transition:.3s;"></div>
+  </div>
+  <div id="runnerQ"></div>
+</div>
+
+<!-- 2 拼图 -->
+<div class="game-panel" id="panel-puzzle">
+  <h2 style="color:#c62828">红色拼图·延安地标</h2>
+  <p class="tip">点击两块交换，拼出正确图案（数字顺序 1~9）。</p>
+  <div id="puzzleGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-width:360px;margin:12px auto;"></div>
+</div>
+
+<!-- 3 决策 -->
+<div class="game-panel" id="panel-decision">
+  <h2 style="color:#c62828">青年行·长征决策</h2>
+  <div id="decStats" class="tip"></div>
+  <div id="decText" style="font-size:16px;margin:12px 0;"></div>
+  <div id="decOptions"></div>
+</div>
+
+<!-- 4 连线 -->
+<div class="game-panel" id="panel-link">
+  <h2 style="color:#c62828">星火接力·知识连线</h2>
+  <p class="tip">依次点“事件”“精神”“行动”，三连正确得分。</p>
+  <div id="linkBoard" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;"></div>
+</div>
+
+<!-- 5 点灯 -->
+<div class="game-panel" id="panel-lights">
+  <h2 style="color:#c62828">宝塔山点灯</h2>
+  <p class="tip">30秒内点亮所有革命旧址灯盏。</p>
+  <div id="lightTimer" class="tip"></div>
+  <div id="lightGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:420px;margin:12px auto;"></div>
+</div>
+
+<!-- 海报弹层 -->
+<div class="poster-mask" id="posterMask">
+  <canvas id="posterCanvas" width="720" height="1000"></canvas>
+  <div class="poster-actions">
+    <button class="btn" onclick="downloadPoster()">保存海报</button>
+    <button class="btn ghost" onclick="closePoster()">关闭</button>
+  </div>
+</div>
+
+<script>
+let KB = null;
+
+async function loadKB(){
+  try{
+    const res = await fetch('./knowledge.json');
+    KB = await res.json();
+    console.log('知识库加载成功', KB);
+  }catch(e){
+    alert('知识库加载失败，请确保 knowledge.json 与 index.html 同目录，且通过 http 访问（不要直接双击打开）。');
+    console.error(e);
+  }
+}
+
+function openGame(name){
+  if(!KB){ alert('知识库尚未加载完成，请稍候或检查 knowledge.json'); return; }
+  document.querySelectorAll('.game-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.getElementById('entries').style.display='none';
+  document.getElementById('backBar').style.display='block';
+  if(name==='runner') startRunner();
+  if(name==='puzzle') startPuzzle();
+  if(name==='decision') startDecision();
+  if(name==='link') startLink();
+  if(name==='lights') startLights();
+}
+function backHome(){
+  document.querySelectorAll('.game-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('entries').style.display='grid';
+  document.getElementById('backBar').style.display='none';
+  if(lightState.timer) clearInterval(lightState.timer);
+}
+
+/* ================= 海报 ================= */
+function showPoster(data){
+  const c = document.getElementById('posterCanvas');
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0,0,0,1000);
+  g.addColorStop(0,'#c62828'); g.addColorStop(1,'#7f0000');
+  ctx.fillStyle=g; ctx.fillRect(0,0,720,1000);
+  ctx.strokeStyle='#f2b705'; ctx.lineWidth=8; ctx.strokeRect(20,20,680,960);
+  ctx.fillStyle='#fff'; ctx.textAlign='center';
+  ctx.font='bold 40px sans-serif';
+  ctx.fillText('重走红色延安路',360,120);
+  ctx.font='bold 32px sans-serif';
+  ctx.fillText('赓续奋斗爱国魂',360,170);
+  ctx.font='bold 28px sans-serif'; ctx.fillStyle='#f2b705';
+  ctx.fillText(data.game,360,250);
+  ctx.fillStyle='#fff'; ctx.font='24px sans-serif';
+  wrapText(ctx,data.title,360,320,600,36);
+  ctx.font='20px sans-serif'; ctx.fillStyle='#ffe0b2';
+  let y=420;
+  data.lines.forEach(line=>{ ctx.fillText(line,360,y); y+=34; });
+  ctx.fillStyle='#f2b705'; ctx.font='bold 22px sans-serif';
+  wrapText(ctx,data.quote,360,760,600,34);
+  ctx.fillStyle='#fff'; ctx.font='18px sans-serif';
+  ctx.fillText('长征胜利九十载 · 强国复兴青年行',360,880);
+  ctx.fillText(data.name ? '—— '+data.name : '—— 青年奋斗者',360,920);
+  document.getElementById('posterMask').classList.add('active');
+}
+function wrapText(ctx,text,x,y,maxWidth,lineHeight){
+  const chars = text.split('');
+  let line='', yy=y;
+  for(const w of chars){
+    if(ctx.measureText(line+w).width>maxWidth){ ctx.fillText(line,x,yy); line=w; yy+=lineHeight; }
+    else line+=w;
+  }
+  ctx.fillText(line,x,yy);
+}
+function downloadPoster(){
+  const c=document.getElementById('posterCanvas');
+  const a=document.createElement('a');
+  a.download='延安路奋斗海报.png';
+  a.href=c.toDataURL('image/png');
+  a.click();
+}
+function closePoster(){ document.getElementById('posterMask').classList.remove('active'); }
+
+/* ================= 1 跑酷 ================= */
+let runnerState={idx:0,correct:0,wrong:0,qs:[]};
+function startRunner(){
+  runnerState={idx:0,correct:0,wrong:0,qs:shuffle([...KB.quiz]).slice(0,8)};
+  renderRunner();
+}
+function renderRunner(){
+  const q = runnerState.qs[runnerState.idx];
+  if(!q){
+    const total = runnerState.correct+runnerState.wrong || 1;
+    const rate = Math.round(runnerState.correct/total*100);
+    showPoster({
+      game:'🏃 延安路·闯关跑酷',
+      title:`你答对 ${runnerState.correct} 题，答错 ${runnerState.wrong} 题，正确率 ${rate}%`,
+      lines:[`正确率：${rate}%`,`前进关卡：${runnerState.correct}/8`],
+      quote: rate>=80?'长征路上无难事，只要肯登攀！':'重走延安路，奋斗正当时！',
+      name:''
+    });
+    return;
+  }
+  const progress = runnerState.idx/8*100;
+  document.getElementById('runnerDot').style.left = `calc(${progress}% - 12px)`;
+  const box = document.getElementById('runnerQ');
+  box.innerHTML = `<p style="font-weight:bold;margin:10px 0">第${runnerState.idx+1}关：${q.q}</p>`;
+  q.options.forEach((o,i)=>{
+    const b=document.createElement('button');
+    b.className='btn ghost';
+    b.style.cssText='display:block;width:100%;text-align:left;margin:6px 0';
+    b.textContent=o;
+    b.onclick=()=>runnerAnswer(i,q.answer,q.tip);
+    box.appendChild(b);
+  });
+}
+function runnerAnswer(i,ans,tip){
+  if(i===ans){ runnerState.correct++; alert('答对！\n'+tip); }
+  else { runnerState.wrong++; alert('答错啦。\n'+tip); }
+  runnerState.idx++;
+  renderRunner();
+}
+
+/* ================= 2 拼图 ================= */
+let puzzleState={order:[],sel:null,moves:0};
+const puzzleColors=['#c62828','#e65100','#f2b705','#2e7d32','#1565c0','#6a1b9a','#ad1457','#00838f','#4e342e'];
+function startPuzzle(){
+  puzzleState={order:shuffle([...Array(9).keys()]),sel:null,moves:0};
+  // 防止开局已完成
+  if(puzzleState.order.every((v,i)=>v===i)) puzzleState.order.reverse();
+  renderPuzzle();
+}
+function renderPuzzle(){
+  const g=document.getElementById('puzzleGrid'); g.innerHTML='';
+  puzzleState.order.forEach((v,idx)=>{
+    const d=document.createElement('div');
+    d.style.cssText=`height:100px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;cursor:pointer;background:${puzzleColors[v]};font-size:20px;`;
+    d.textContent = v+1;
+    if(puzzleState.sel===idx) d.style.outline='3px solid #f2b705';
+    d.onclick=()=>puzzleClick(idx);
+    g.appendChild(d);
+  });
+  if(puzzleState.order.every((v,i)=>v===i)){
+    setTimeout(()=>{
+      const p = KB.puzzle[0] || {name:'延安地标',tip:''};
+      showPoster({
+        game:'🧩 红色拼图·延安地标',
+        title:`你用了 ${puzzleState.moves} 步拼出「${p.name}」`,
+        lines:[`步数：${puzzleState.moves}`,`地标：${p.name}`,`知识：${p.tip}`],
+        quote:'拼出红色地标，记住革命初心！',
+        name:''
+      });
+    },300);
+  }
+}
+function puzzleClick(idx){
+  if(puzzleState.sel===null){ puzzleState.sel=idx; }
+  else if(puzzleState.sel===idx){ puzzleState.sel=null; }
+  else{
+    const a=puzzleState.sel,b=idx;
+    [puzzleState.order[a],puzzleState.order[b]]=[puzzleState.order[b],puzzleState.order[a]];
+    puzzleState.sel=null; puzzleState.moves++;
+  }
+  renderPuzzle();
+}
+
+/* ================= 3 决策 ================= */
+let decState={step:0,hp:100,morale:100,time:100,log:[]};
+function startDecision(){
+  const s=KB.decision.start;
+  decState={step:0,hp:s.hp,morale:s.morale,time:s.time,log:[]};
+  renderDecision();
+}
+function renderDecision(){
+  const steps=KB.decision.steps;
+  if(decState.step>=steps.length){
+    const score=Math.max(0,Math.round((decState.hp+decState.morale+decState.time)/3));
+    showPoster({
+      game:'🧭 青年行·长征决策',
+      title:`你的奋斗值：${score} 分`,
+      lines:[`体力：${decState.hp}`,`士气：${decState.morale}`,`时间：${decState.time}`,`选择：${decState.log.length} 次`],
+      quote: score>=80?'决策有方，奋斗有力！':'长征精神，贵在坚持与选择！',
+      name:''
+    });
+    return;
+  }
+  const st=steps[decState.step];
+  document.getElementById('decStats').textContent=`体力 ${decState.hp} · 士气 ${decState.morale} · 时间 ${decState.time}`;
+  document.getElementById('decText').textContent=st.text;
+  const box=document.getElementById('decOptions'); box.innerHTML='';
+  st.options.forEach((o,i)=>{
+    const b=document.createElement('button');
+    b.className='btn ghost';
+    b.style.cssText='display:block;width:100%;text-align:left;margin:6px 0';
+    b.textContent=o.text;
+    b.onclick=()=>decChoose(i);
+    box.appendChild(b);
+  });
+}
+function decChoose(i){
+  const st=KB.decision.steps[decState.step];
+  const o=st.options[i];
+  decState.hp=Math.max(0,decState.hp+o.hp);
+  decState.morale=Math.max(0,decState.morale+o.morale);
+  decState.time=Math.max(0,decState.time+o.time);
+  decState.log.push(o.text);
+  decState.step++;
+  alert(o.tip);
+  renderDecision();
+}
+
+/* ================= 4 连线 ================= */
+let linkState={pairs:[],sel:[],score:0,total:0,current:0};
+function startLink(){
+  const pairs=shuffle([...KB.link]).slice(0,5);
+  linkState={pairs,sel:[],score:0,total:pairs.length,current:0};
+  renderLink();
+}
+function renderLink(){
+  if(linkState.current>=linkState.pairs.length){
+    showPoster({
+      game:'🔗 星火接力·知识连线',
+      title:`你连对 ${linkState.score}/${linkState.total} 组`,
+      lines:[`得分：${linkState.score}`,`总组数：${linkState.total}`],
+      quote: linkState.score===linkState.total?'星火接力，青年有为！':'再接再厉，星火相传！',
+      name:''
+    });
+    return;
+  }
+  const p=linkState.pairs[linkState.current];
+  const all=KB.link;
+  const pickOthers=(key,val,n=3)=>shuffle(all.map(x=>x[key]).filter(v=>v!==val)).slice(0,n);
+  const cols=[
+    {label:'事件',items:shuffle([p.event,...pickOthers('event',p.event)])},
+    {label:'精神',items:shuffle([p.spirit,...pickOthers('spirit',p.spirit)])},
+    {label:'青年行动',items:shuffle([p.action,...pickOthers('action',p.action)])}
+  ];
+  const board=document.getElementById('linkBoard'); board.innerHTML='';
+  cols.forEach((c,ci)=>{
+    const col=document.createElement('div');
+    col.style.cssText='flex:1;min-width:100px';
+    col.innerHTML=`<p style="font-weight:bold;color:#c62828;text-align:center">${c.label}</p>`;
+    c.items.forEach(item=>{
+      const b=document.createElement('button');
+      b.className='btn ghost';
+      b.style.cssText='display:block;width:100%;font-size:12px;margin:4px 0';
+      b.textContent=item;
+      b.onclick=()=>linkPick(ci,item);
+      col.appendChild(b);
+    });
+    board.appendChild(col);
+  });
+}
+function linkPick(col,val){
+  linkState.sel[col]=val;
+  if(linkState.sel.filter(Boolean).length===3){
+    const p=linkState.pairs[linkState.current];
+    const ok = linkState.sel[0]===p.event && linkState.sel[1]===p.spirit && linkState.sel[2]===p.action;
+    if(ok){ linkState.score++; alert('连对！\n'+p.event+' — '+p.spirit+' — '+p.action); }
+    else { alert('再想想：\n'+p.event+' — '+p.spirit+' — '+p.action); }
+    linkState.current++; linkState.sel=[];
+    renderLink();
+  }
+}
+
+/* ================= 5 点灯 ================= */
+let lightState={lit:new Set(),timer:null,left:30};
+function startLights(){
+  if(lightState.timer) clearInterval(lightState.timer);
+  lightState={lit:new Set(),timer:null,left:30};
+  const g=document.getElementById('lightGrid'); g.innerHTML='';
+  shuffle([...KB.lights]).forEach(l=>{
+    const b=document.createElement('button');
+    b.className='btn ghost'; b.textContent=l.name; b.style.height='60px';
+    b.onclick=()=>lightClick(l.id,b);
+    g.appendChild(b);
+  });
+  document.getElementById('lightTimer').textContent='剩余 30 秒';
+  lightState.timer=setInterval(()=>{
+    lightState.left--;
+    document.getElementById('lightTimer').textContent=`剩余 ${lightState.left} 秒`;
+    if(lightState.left<=0){ clearInterval(lightState.timer); endLights(); }
+  },1000);
+}
+function lightClick(id,btn){
+  if(lightState.lit.has(id)) return;
+  lightState.lit.add(id);
+  btn.style.background='#f2b705'; btn.style.color='#2b1b17';
+  if(lightState.lit.size===KB.lights.length){ clearInterval(lightState.timer); endLights(); }
+}
+function endLights(){
+  const n=lightState.lit.size,total=KB.lights.length;
+  showPoster({
+    game:'💡 宝塔山点灯',
+    title:`你点亮了 ${n}/${total} 盏革命旧址灯`,
+    lines:[`点亮：${n} 盏`,`用时：${30-lightState.left} 秒`],
+    quote: n===total?'星星之火，可以燎原！':'点亮星火，照亮奋斗路！',
+    name:''
+  });
+}
+
+/* ================= 工具 ================= */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+window.addEventListener('load',loadKB);
+</script>
+</body>
+</html>

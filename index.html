@@ -12,7 +12,7 @@
   header h1{font-size:23px;color:var(--red);letter-spacing:2px;}
   header p{font-size:13px;color:#8d6e63;margin-top:6px;}
   .entries{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:16px;max-width:920px;margin:0 auto;}
-  .card{background:#fff;border:2px solid #ffcc80;border-radius:16px;padding:14px;text-align:center;cursor:pointer;transition:.2s;box-shadow:0 4px 12px rgba(198,40,40,.08);position:relative;overflow:hidden;}
+  .card{background:#fff;border:2px solid #ffcc80;border-radius:16px;padding:14px;text-align:center;cursor:pointer;transition:.2s;box-shadow:0 4px 12px rgba(198,40,40,.08);}
   .card:hover{transform:translateY(-4px);border-color:var(--red);}
   .card .icon{font-size:30px;}
   .card h3{font-size:15px;margin:8px 0 4px;color:var(--red);}
@@ -97,7 +97,7 @@
 
 <div class="entries" id="entries">
   <div class="card" onclick="openGame('runner')"><div class="icon">🏃</div><h3>延安路·闯关跑酷</h3><p>答题前进，重走延安路</p></div>
-  <div class="card" onclick="openGame('puzzle')"><div class="icon">🧩</div><h3>红色拼图·延安地标</h3><p>拼出宝塔山、枣园、杨家岭</p></div>
+  <div class="card" onclick="openGame('puzzle')"><div class="icon">🧩</div><h3>红色拼图·延安地标</h3><p>10 个延安地标真实照片</p></div>
   <div class="card" onclick="openGame('decision')"><div class="icon">🧭</div><h3>青年行·长征决策</h3><p>你的选择决定奋斗值</p></div>
   <div class="card" onclick="openGame('link')"><div class="icon">🔗</div><h3>星火接力·知识连线</h3><p>手动画线，三连成组</p></div>
   <div class="card" onclick="openGame('lights')"><div class="icon">💡</div><h3>宝塔山点灯</h3><p>点亮延安夜景旧址灯</p></div>
@@ -131,7 +131,7 @@
 <!-- ============ 2 拼图 ============ -->
 <div class="game-panel" id="panel-puzzle">
   <h2 class="game-title">🧩 红色拼图·延安地标</h2>
-  <p class="tip">点击两块交换位置，拼出完整的延安地标画面。每幅图完成后解锁一条地标知识。</p>
+  <p class="tip">点击两块交换位置，拼出完整的延安地标实景。每幅完成后解锁一条地标知识。</p>
   <div style="text-align:center;font-weight:bold;color:var(--red);margin:6px 0" id="pzName"></div>
   <div class="pz-wrap"><div id="puzzleGrid"></div></div>
   <div class="tip" id="pzTip" style="text-align:center;min-height:20px"></div>
@@ -219,17 +219,17 @@ function backHome(){
   document.getElementById('entries').style.display='grid';
   document.getElementById('backBar').style.display='none';
   if(lightState.timer) clearInterval(lightState.timer);
+  if(lightState.raf) cancelAnimationFrame(lightState.raf);
   if(linkState.drawing) linkState.drawing=false;
 }
 function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
 
-/* ===================== 海报系统（按游戏差异化） ===================== */
+/* ===================== 海报系统 ===================== */
 function basePoster(ctx, accent='#c62828'){
   const g = ctx.createLinearGradient(0,0,0,1000);
   g.addColorStop(0,accent); g.addColorStop(1,'#5c0000');
   ctx.fillStyle=g; ctx.fillRect(0,0,720,1000);
   ctx.strokeStyle='#f2b705'; ctx.lineWidth=8; ctx.strokeRect(20,20,680,960);
-  // 装饰星
   ctx.fillStyle='rgba(242,183,5,.5)';
   for(let i=0;i<30;i++){
     const x=Math.random()*720,y=Math.random()*1000,r=Math.random()*2+1;
@@ -255,28 +255,20 @@ function showPoster(data){
   const c=document.getElementById('posterCanvas');
   const ctx=c.getContext('2d');
   ctx.clearRect(0,0,720,1000);
-  const accent = data.accent || '#c62828';
-  basePoster(ctx,accent);
-  // 游戏名徽章
+  basePoster(ctx,data.accent||'#c62828');
   ctx.fillStyle='#f2b705';
-  ctx.beginPath();
-  ctx.roundRect ? ctx.roundRect(180,230,360,54,27) : ctx.rect(180,230,360,54);
-  ctx.fill();
+  if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(180,230,360,54,27); ctx.fill(); }
+  else { ctx.fillRect(180,230,360,54); }
   ctx.fillStyle='#5c0000'; ctx.font='bold 26px sans-serif';
   ctx.fillText(data.game,360,266);
-  // 主标题
   ctx.fillStyle='#fff'; ctx.font='bold 26px sans-serif';
   let y = wrapText(ctx,data.title,360,330,600,36) + 50;
-  // 主视觉（按游戏不同）
   if(data.visual) data.visual(ctx,360,y);
-  // 数据
   y += 190;
   ctx.font='19px sans-serif'; ctx.fillStyle='#ffe0b2';
   data.lines.forEach(line=>{ ctx.fillText(line,360,y); y+=32; });
-  // 金句
   ctx.fillStyle='#f2b705'; ctx.font='bold 22px sans-serif';
   wrapText(ctx,data.quote,360,820,600,32);
-  // 落款
   ctx.fillStyle='#fff'; ctx.font='17px sans-serif';
   ctx.fillText('—— 青年奋斗者 · 延安精神传承人',360,920);
   document.getElementById('posterMask').classList.add('active');
@@ -289,16 +281,13 @@ function downloadPoster(){
 }
 function closePoster(){ document.getElementById('posterMask').classList.remove('active'); }
 
-/* 海报主视觉：画宝塔山 */
+/* 海报主视觉：画宝塔山（回退用） */
 function drawBaotaVisual(ctx,cx,cy){
-  ctx.save();
-  ctx.translate(cx,cy);
-  // 山
+  ctx.save(); ctx.translate(cx,cy);
   ctx.fillStyle='#4e342e';
   ctx.beginPath();ctx.moveTo(-220,120);ctx.lineTo(-60,-30);ctx.lineTo(80,120);ctx.closePath();ctx.fill();
   ctx.fillStyle='#3e2723';
   ctx.beginPath();ctx.moveTo(-40,120);ctx.lineTo(120,-10);ctx.lineTo(240,120);ctx.closePath();ctx.fill();
-  // 宝塔
   ctx.fillStyle='#f2b705';
   const tower=(x,base,w,h,levels)=>{
     ctx.fillRect(x-w/2,base-h,w,h);
@@ -307,13 +296,23 @@ function drawBaotaVisual(ctx,cx,cy){
       ctx.beginPath();ctx.moveTo(x-lw/2,ly);ctx.lineTo(x+lw/2,ly);ctx.lineTo(x,ly-10);ctx.closePath();ctx.fill();
     }
   };
-  tower(0,100,26,90,6);
-  tower(-90,100,18,60,4);
-  tower(100,100,18,60,4);
-  // 灯
+  tower(0,100,26,90,6); tower(-90,100,18,60,4); tower(100,100,18,60,4);
   ctx.fillStyle='#fff3b0';
   for(let i=0;i<6;i++){ ctx.beginPath();ctx.arc(0,100-i*15,2.5,0,Math.PI*2);ctx.fill(); }
   ctx.restore();
+}
+
+/* ===================== 图片加载 ===================== */
+const imgCache={};
+function loadImage(src){
+  return new Promise((resolve)=>{
+    if(imgCache[src]) return resolve(imgCache[src]);
+    const im=new Image();
+    im.crossOrigin='anonymous';
+    im.onload=()=>{ imgCache[src]=im; resolve(im); };
+    im.onerror=()=>{ resolve(null); };
+    im.src=src;
+  });
 }
 
 /* ===================== 1 跑酷 ===================== */
@@ -335,11 +334,7 @@ function renderRunner(){
       lines:[`正确率：${rate}%`,`抵达：${RUN_STOPS[Math.min(7,runnerState.correct)]}`,'重走延安路，奋斗正当时'],
       quote: rate>=80?'长征路上无难事，只要肯登攀！':'每一步都算数，重走延安路！',
       accent:'#b71c1c',
-      visual:(ctx,cx,cy)=>{
-        // 小人 + 宝塔
-        drawBaotaVisual(ctx,cx,cy-30);
-        ctx.font='40px sans-serif'; ctx.fillText('🚩',cx,cy+150);
-      }
+      visual:(ctx,cx,cy)=>{ drawBaotaVisual(ctx,cx,cy-30); ctx.font='40px sans-serif'; ctx.fillText('🚩',cx,cy+150); }
     });
     return;
   }
@@ -375,141 +370,65 @@ function runnerAnswer(i,btn){
   setTimeout(()=>{ runnerState.idx++; renderRunner(); },1200);
 }
 
-/* ===================== 2 拼图（Canvas 绘制延安地标） ===================== */
-let puzzleState={order:[],sel:null,moves:0,landmark:0,canvases:[]};
+/* ===================== 2 拼图（10 个延安地标真实照片） ===================== */
 const LANDMARKS=[
-  {name:'宝塔山',draw:drawBaotaScene,tip:'宝塔山是延安的标志，1937年中共中央进驻延安。'},
-  {name:'枣园',draw:drawZaoyuanScene,tip:'枣园是中共中央书记处旧址，毛泽东等在此居住。'},
-  {name:'杨家岭',draw:drawYangjialingScene,tip:'杨家岭中央大礼堂是中共七大会址。'},
-  {name:'南泥湾',draw:drawNanniwanScene,tip:'南泥湾大生产运动体现自力更生、艰苦奋斗精神。'}
+  {name:'宝塔山',           img:'./assets/baota.jpg',           tip:'宝塔山是延安的标志，1937年中共中央进驻延安。'},
+  {name:'枣园',             img:'./assets/zaoyuan.jpg',         tip:'枣园是中共中央书记处旧址，毛泽东等在此居住。'},
+  {name:'杨家岭',           img:'./assets/yangjialing.jpg',     tip:'杨家岭中央大礼堂是中共七大会址。'},
+  {name:'南泥湾',           img:'./assets/nanniwan.jpg',        tip:'南泥湾大生产运动体现自力更生、艰苦奋斗精神。'},
+  {name:'凤凰山',           img:'./assets/fenghuang.jpg',       tip:'凤凰山麓是中共中央1937年进驻延安后的第一个驻地。'},
+  {name:'王家坪',           img:'./assets/wangjiaping.jpg',     tip:'王家坪是中央军委和八路军总部旧址。'},
+  {name:'延安革命纪念馆',   img:'./assets/yanan-jinianguan.jpg',tip:'延安革命纪念馆系统展示中共中央在延安十三年的光辉历程。'},
+  {name:'清凉山新闻纪念馆', img:'./assets/qingliangshan.jpg',   tip:'清凉山是延安时期新华社、解放日报等新闻出版机构所在地。'},
+  {name:'鲁迅艺术文学院旧址',img:'./assets/luyi.jpg',           tip:'鲁艺1938年成立，培养了大批革命文艺人才，《黄河大合唱》在此诞生。'},
+  {name:'四八烈士陵园',     img:'./assets/saba-lingyuan.jpg',   tip:'四八烈士陵园安葬着叶挺、王若飞等“四八”空难烈士，缅怀革命先烈。'}
 ];
-function drawSky(ctx,w,h){
-  const g=ctx.createLinearGradient(0,0,0,h);
-  g.addColorStop(0,'#ffb74d'); g.addColorStop(.5,'#ffe0b2'); g.addColorStop(1,'#a5d6a7');
-  ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
-  // 太阳
-  ctx.fillStyle='#fff176'; ctx.beginPath(); ctx.arc(w*.8,h*.22,22,0,Math.PI*2); ctx.fill();
-  // 云
-  ctx.fillStyle='rgba(255,255,255,.8)';
-  [[w*.2,h*.15,20],[w*.32,h*.12,14]].forEach(([x,y,r])=>{
-    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.arc(x+r,y+4,r*.8,0,Math.PI*2);ctx.arc(x-r,y+4,r*.7,0,Math.PI*2);ctx.fill();
-  });
-  // 地面
-  ctx.fillStyle='#8d6e63'; ctx.fillRect(0,h*.78,w,h*.22);
-  ctx.fillStyle='#6d4c41'; ctx.fillRect(0,h*.82,w,h*.18);
-}
-function drawTower(ctx,x,base,w,h,levels,color='#f2b705'){
-  ctx.fillStyle=color;
-  ctx.fillRect(x-w/2,base-h,w,h);
-  for(let i=0;i<levels;i++){
-    const lw=w+8-i*1.5, ly=base-h+i*(h/levels);
-    ctx.beginPath();ctx.moveTo(x-lw/2,ly);ctx.lineTo(x+lw/2,ly);ctx.lineTo(x,ly-8);ctx.closePath();ctx.fill();
-  }
-  ctx.fillStyle='#fff3b0';
-  for(let i=0;i<levels;i++){ ctx.beginPath();ctx.arc(x,base-h+i*(h/levels)+6,2,0,Math.PI*2);ctx.fill(); }
-}
-function drawBaotaScene(ctx,w,h){
-  drawSky(ctx,w,h);
-  // 山
-  ctx.fillStyle='#4e342e';
-  ctx.beginPath();ctx.moveTo(0,h*.8);ctx.lineTo(w*.25,h*.45);ctx.lineTo(w*.5,h*.8);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#3e2723';
-  ctx.beginPath();ctx.moveTo(w*.4,h*.8);ctx.lineTo(w*.68,h*.38);ctx.lineTo(w*.95,h*.8);ctx.closePath();ctx.fill();
-  // 宝塔
-  drawTower(ctx,w*.5,h*.78,w*.07,h*.32,6);
-  drawTower(ctx,w*.3,h*.78,w*.05,h*.2,4);
-  drawTower(ctx,w*.74,h*.78,w*.05,h*.2,4);
-  // 树
-  ctx.fillStyle='#2e7d32';
-  for(let i=0;i<6;i++){ const x=w*.08+i*w*.15; ctx.beginPath();ctx.arc(x,h*.86,10,0,Math.PI*2);ctx.fill(); }
-}
-function drawZaoyuanScene(ctx,w,h){
-  drawSky(ctx,w,h);
-  // 窑洞
-  ctx.fillStyle='#d7b98e'; ctx.fillRect(w*.1,h*.5,w*.8,h*.3);
-  ctx.fillStyle='#a1887f'; ctx.fillRect(w*.1,h*.5,w*.8,h*.04);
-  for(let i=0;i<4;i++){
-    const x=w*(.18+i*.17);
-    ctx.fillStyle='#5d4037';
-    ctx.beginPath();ctx.arc(x,h*.66,w*.055,Math.PI,0);ctx.lineTo(x+w*.055,h*.8);ctx.lineTo(x-w*.055,h*.8);ctx.closePath();ctx.fill();
-    ctx.fillStyle='#ffcc80'; ctx.fillRect(x-w*.02,h*.6,w*.04,h*.06);
-  }
-  // 枣树
-  ctx.fillStyle='#2e7d32';
-  ctx.beginPath();ctx.arc(w*.82,h*.3,26,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#c62828';
-  for(let i=0;i<8;i++){ const a=i/8*Math.PI*2; ctx.beginPath();ctx.arc(w*.82+Math.cos(a)*18,h*.3+Math.sin(a)*18,3,0,Math.PI*2);ctx.fill(); }
-  // 红旗
-  ctx.strokeStyle='#5d4037';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(w*.06,h*.8);ctx.lineTo(w*.06,h*.4);ctx.stroke();
-  ctx.fillStyle='#c62828';ctx.beginPath();ctx.moveTo(w*.06,h*.4);ctx.lineTo(w*.2,h*.45);ctx.lineTo(w*.06,h*.5);ctx.closePath();ctx.fill();
-}
-function drawYangjialingScene(ctx,w,h){
-  drawSky(ctx,w,h);
-  // 中央大礼堂
-  ctx.fillStyle='#8d6e63'; ctx.fillRect(w*.15,h*.45,w*.7,h*.35);
-  ctx.fillStyle='#6d4c41'; ctx.fillRect(w*.15,h*.45,w*.7,h*.05);
-  // 屋顶
-  ctx.fillStyle='#c62828';
-  ctx.beginPath();ctx.moveTo(w*.12,h*.45);ctx.lineTo(w*.5,h*.25);ctx.lineTo(w*.88,h*.45);ctx.closePath();ctx.fill();
-  // 门
-  ctx.fillStyle='#3e2723'; ctx.fillRect(w*.44,h*.62,w*.12,h*.18);
-  ctx.fillStyle='#f2b705'; ctx.beginPath();ctx.arc(w*.5,h*.72,3,0,Math.PI*2);ctx.fill();
-  // 窗
-  ctx.fillStyle='#ffcc80';
-  for(let i=0;i<3;i++){ ctx.fillRect(w*(.22+i*.18),h*.52,w*.06,h*.07); }
-  // 旗
-  ctx.strokeStyle='#5d4037';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(w*.1,h*.8);ctx.lineTo(w*.1,h*.3);ctx.stroke();
-  ctx.fillStyle='#c62828';ctx.beginPath();ctx.moveTo(w*.1,h*.3);ctx.lineTo(w*.26,h*.36);ctx.lineTo(w*.1,h*.42);ctx.closePath();ctx.fill();
-}
-function drawNanniwanScene(ctx,w,h){
-  drawSky(ctx,w,h);
-  // 麦田
-  ctx.fillStyle='#f9a825';
-  for(let i=0;i<20;i++){ const x=w*i/20; ctx.fillRect(x,h*.72,w*.02,h*.14); }
-  // 远山
-  ctx.fillStyle='#7cb342';
-  ctx.beginPath();ctx.moveTo(0,h*.7);ctx.lineTo(w*.3,h*.45);ctx.lineTo(w*.6,h*.7);ctx.closePath();ctx.fill();
-  // 359旅战士
-  ctx.font=`${h*.18}px sans-serif`; ctx.textAlign='center';
-  ctx.fillText('👨‍🌾',w*.35,h*.8);
-  ctx.fillText('🌾',w*.6,h*.82);
-  ctx.fillText('🚜',w*.75,h*.84);
-  // 红旗
-  ctx.strokeStyle='#5d4037';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(w*.15,h*.8);ctx.lineTo(w*.15,h*.42);ctx.stroke();
-  ctx.fillStyle='#c62828';ctx.beginPath();ctx.moveTo(w*.15,h*.42);ctx.lineTo(w*.32,h*.48);ctx.lineTo(w*.15,h*.54);ctx.closePath();ctx.fill();
-}
-function startPuzzle(){
-  puzzleState={order:shuffle([...Array(9).keys()]),sel:null,moves:0,landmark:puzzleState.landmark||0,canvases:[]};
+let puzzleState={order:[],sel:null,moves:0,landmark:0,fullImg:null};
+
+async function startPuzzle(){
+  puzzleState.order=shuffle([...Array(9).keys()]);
   if(puzzleState.order.every((v,i)=>v===i)) puzzleState.order.reverse();
-  // 生成 9 块 canvas
+  puzzleState.sel=null; puzzleState.moves=0;
   const lm=LANDMARKS[puzzleState.landmark];
   document.getElementById('pzName').textContent=`第 ${puzzleState.landmark+1} / ${LANDMARKS.length} 幅：${lm.name}`;
   document.getElementById('pzTip').textContent='';
-  const grid=document.getElementById('puzzleGrid'); grid.innerHTML='';
-  const full=document.createElement('canvas'); full.width=360; full.height=360;
-  const fctx=full.getContext('2d'); lm.draw(fctx,360,360);
+  const im=await loadImage(lm.img);
+  const size=360;
+  const full=document.createElement('canvas'); full.width=size; full.height=size;
+  const fctx=full.getContext('2d');
+  if(im){
+    const s=Math.min(im.width,im.height);
+    const sx=(im.width-s)/2, sy=(im.height-s)/2;
+    fctx.drawImage(im,sx,sy,s,s,0,0,size,size);
+  }else{
+    const g=fctx.createLinearGradient(0,0,size,size);
+    g.addColorStop(0,'#c62828'); g.addColorStop(1,'#f2b705');
+    fctx.fillStyle=g; fctx.fillRect(0,0,size,size);
+    fctx.fillStyle='#fff'; fctx.font='bold 22px sans-serif'; fctx.textAlign='center';
+    fctx.fillText(lm.name,size/2,size/2);
+    document.getElementById('pzTip').textContent='⚠️ 未找到 '+lm.img+'，请上传到 assets/ 目录';
+  }
   puzzleState.fullImg=full;
-  puzzleState.order.forEach((v,idx)=>{
-    const cell=document.createElement('div'); cell.className='pz-cell'; cell.dataset.v=v;
+  const grid=document.getElementById('puzzleGrid'); grid.innerHTML='';
+  puzzleState.order.forEach((v)=>{
+    const cell=document.createElement('div'); cell.className='pz-cell';
     const cv=document.createElement('canvas'); cv.width=120; cv.height=120;
-    const cctx=cv.getContext('2d');
-    // 根据 v 计算原图 3x3 区域
-    const sx=(v%3)*120, sy=Math.floor(v/3)*120;
-    cctx.drawImage(full,sx,sy,120,120,0,0,120,120);
     cell.appendChild(cv);
     const num=document.createElement('div'); num.className='num'; num.textContent=v+1; cell.appendChild(num);
-    cell.onclick=()=>puzzleClick(idx);
+    cell.onclick=()=>puzzleClick([...grid.children].indexOf(cell));
     grid.appendChild(cell);
   });
   renderPuzzle();
 }
 function renderPuzzle(){
-  const cells=document.querySelectorAll('.pz-cell');
+  const grid=document.getElementById('puzzleGrid');
+  const cells=[...grid.children];
   cells.forEach((c,idx)=>{
     c.classList.toggle('sel',puzzleState.sel===idx);
     const v=puzzleState.order[idx];
     const cv=c.querySelector('canvas'); const cctx=cv.getContext('2d');
     const sx=(v%3)*120, sy=Math.floor(v/3)*120;
+    cctx.clearRect(0,0,120,120);
     cctx.drawImage(puzzleState.fullImg,sx,sy,120,120,0,0,120,120);
     c.querySelector('.num').textContent=v+1;
   });
@@ -521,22 +440,20 @@ function renderPuzzle(){
       showPoster({
         game:'🧩 红色拼图·延安地标',
         title:`你用了 ${puzzleState.moves} 步拼出「${lm.name}」`,
-        lines:[`当前地标：${lm.name}`,`步数：${puzzleState.moves}`,`知识：${lm.tip}`],
-        quote: isLast?'四幅地标全部拼成，延安精神记心间！':'拼出红色地标，记住革命初心！',
+        lines:[`地标：${lm.name}`,`步数：${puzzleState.moves}`,`知识：${lm.tip}`],
+        quote: isLast?'十幅地标全部拼成，延安精神记心间！':'拼出红色地标，记住革命初心！',
         accent:'#e65100',
         visual:(ctx,cx,cy)=>{
-          // 把拼好的地标画进海报
-          ctx.save();
           const size=280;
+          ctx.save();
           ctx.drawImage(puzzleState.fullImg,cx-size/2,cy-size/2,size,size);
           ctx.strokeStyle='#f2b705'; ctx.lineWidth=6;
           ctx.strokeRect(cx-size/2,cy-size/2,size,size);
           ctx.restore();
         }
       });
-      if(!isLast){
-        setTimeout(()=>{ puzzleState.landmark++; startPuzzle(); },1200);
-      }
+      if(!isLast){ setTimeout(()=>{ puzzleState.landmark++; startPuzzle(); },1200); }
+      else { setTimeout(()=>{ puzzleState.landmark=0; },1500); }
     },400);
   }
 }
@@ -580,13 +497,11 @@ function renderDecision(){
       quote: score>=80?'决策有方，奋斗有力！':'长征精神，贵在坚持与选择！',
       accent:'#1565c0',
       visual:(ctx,cx,cy)=>{
-        // 雪山 + 战士 + 数据柱
         ctx.fillStyle='#90caf9';
         ctx.beginPath();ctx.moveTo(cx-180,cy+90);ctx.lineTo(cx-60,cy-80);ctx.lineTo(cx+40,cy+90);ctx.closePath();ctx.fill();
         ctx.fillStyle='#64b5f6';
         ctx.beginPath();ctx.moveTo(cx-20,cy+90);ctx.lineTo(cx+100,cy-60);ctx.lineTo(cx+200,cy+90);ctx.closePath();ctx.fill();
         ctx.font='46px sans-serif'; ctx.fillText('🚩',cx-40,cy+80);
-        // 三个数据条
         const bars=[['体力',decState.hp,'#2e7d32'],['士气',decState.morale,'#f2b705'],['时间',decState.time,'#64b5f6']];
         bars.forEach((b,i)=>{
           const bx=cx-150+i*110, by=cy+120;
@@ -632,8 +547,9 @@ function startLink(){
   renderLink();
 }
 function renderLink(){
-  const cols=['colEvent','colSpirit','colAction'];
-  cols.forEach(id=>{ document.getElementById(id).innerHTML=`<div class="h">${{colEvent:'事件',colSpirit:'精神',colAction:'青年行动'}[id]}</div>`; });
+  ['colEvent','colSpirit','colAction'].forEach(id=>{
+    document.getElementById(id).innerHTML=`<div class="h">${{colEvent:'事件',colSpirit:'精神',colAction:'青年行动'}[id]}</div>`;
+  });
   if(linkState.current>=linkState.pairs.length){
     document.getElementById('linkTip').textContent='🎉 全部完成！';
     showPoster({
@@ -643,7 +559,6 @@ function renderLink(){
       quote: linkState.score===linkState.pairs.length?'星火接力，青年有为！':'再接再厉，星火相传！',
       accent:'#6a1b9a',
       visual:(ctx,cx,cy)=>{
-        // 三列节点 + 连线
         const pts=[[cx-150,cy-60],[cx,cy-60],[cx+150,cy-60],[cx-150,cy+60],[cx,cy+60],[cx+150,cy+60]];
         ctx.strokeStyle='#f2b705'; ctx.lineWidth=4;
         ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);ctx.lineTo(pts[1][0],pts[1][1]);ctx.lineTo(pts[2][0],pts[2][1]);ctx.stroke();
@@ -671,8 +586,7 @@ function renderLink(){
     const col=document.getElementById(id);
     data[id].forEach(text=>{
       const d=document.createElement('div');
-      d.className='link-item'; d.textContent=text; d.dataset.text=text;
-      d.dataset.col=id;
+      d.className='link-item'; d.textContent=text; d.dataset.text=text; d.dataset.col=id;
       d.addEventListener('pointerdown',e=>startDrag(e,d,id));
       col.appendChild(d);
     });
@@ -686,9 +600,7 @@ function getCenter(el){
 }
 function startDrag(e,el,col){
   e.preventDefault();
-  linkState.drawing=true;
-  linkState.startEl=el; linkState.startCol=col;
-  linkState.lastLine=null;
+  linkState.drawing=true; linkState.startEl=el; linkState.startCol=col; linkState.lastLine=null;
   el.classList.add('active');
   document.addEventListener('pointermove',onDragMove);
   document.addEventListener('pointerup',onDragUp);
@@ -704,10 +616,8 @@ function onDragMove(e){
   line.setAttribute('x1',s.x);line.setAttribute('y1',s.y);
   line.setAttribute('x2',x);line.setAttribute('y2',y);
   line.setAttribute('stroke','#f2b705');line.setAttribute('stroke-width','4');
-  line.setAttribute('stroke-linecap','round');
-  line.setAttribute('stroke-dasharray','8 6');
-  svg.appendChild(line);
-  linkState.lastLine=line;
+  line.setAttribute('stroke-linecap','round');line.setAttribute('stroke-dasharray','8 6');
+  svg.appendChild(line); linkState.lastLine=line;
 }
 function onDragUp(e){
   document.removeEventListener('pointermove',onDragMove);
@@ -720,63 +630,49 @@ function onDragUp(e){
   if(!el||!el.classList.contains('link-item')||el===linkState.startEl) return;
   const targetCol=el.dataset.col;
   const order=['colEvent','colSpirit','colAction'];
-  if(order.indexOf(targetCol)!==order.indexOf(linkState.startCol)+1) {
+  if(order.indexOf(targetCol)!==order.indexOf(linkState.startCol)+1){
     document.getElementById('linkTip').textContent='请按 事件 → 精神 → 青年行动 的顺序连线';
     return;
   }
-  linkState.startEl.classList.add('done');
-  el.classList.add('done');
-  // 画永久连线
+  linkState.startEl.classList.add('done'); el.classList.add('done');
   const s=getCenter(linkState.startEl), t=getCenter(el);
   const line=document.createElementNS('http://www.w3.org/2000/svg','line');
   line.setAttribute('x1',s.x);line.setAttribute('y1',s.y);
   line.setAttribute('x2',t.x);line.setAttribute('y2',t.y);
-  line.setAttribute('stroke','#2e7d32');line.setAttribute('stroke-width','4');
-  line.setAttribute('stroke-linecap','round');
+  line.setAttribute('stroke','#2e7d32');line.setAttribute('stroke-width','4');line.setAttribute('stroke-linecap','round');
   linkState.svg.appendChild(line);
-  // 记录到 pair 判断
   if(!linkState.cur) linkState.cur={};
   linkState.cur[targetCol]=el.dataset.text;
   if(targetCol==='colAction'){
     const p=linkState.pairs[linkState.current];
     const ok = linkState.cur.colEvent===p.event && linkState.cur.colSpirit===p.spirit && linkState.cur.colAction===p.action;
-    if(ok){
-      linkState.score++;
-      document.getElementById('linkTip').textContent=`✅ 连对！${p.event} — ${p.spirit} — ${p.action}`;
-    } else {
-      document.getElementById('linkTip').textContent=`❌ 不对哦，正确是：${p.event} — ${p.spirit} — ${p.action}`;
-    }
+    if(ok){ linkState.score++; document.getElementById('linkTip').textContent=`✅ 连对！${p.event} — ${p.spirit} — ${p.action}`; }
+    else { document.getElementById('linkTip').textContent=`❌ 不对哦，正确是：${p.event} — ${p.spirit} — ${p.action}`; }
     linkState.current++; linkState.cur=null;
-    // 清除已连的 done 状态和线，进入下一组
-    setTimeout(()=>{
-      linkState.svg.innerHTML='';
-      renderLink();
-    },1200);
+    setTimeout(()=>{ linkState.svg.innerHTML=''; renderLink(); },1200);
   }
 }
 
 /* ===================== 5 点灯（Canvas 延安夜景） ===================== */
-let lightState={lit:new Set(),timer:null,left:30,hits:[],canvas:null,ctx:null,raf:null};
+let lightState={lit:new Set(),timer:null,left:30,canvas:null,ctx:null,raf:null,stars:[]};
 const LIGHT_POINTS=[
-  {id:'baota',name:'宝塔山',x:360,y:120,r:0},
-  {id:'zaoyuan',name:'枣园',x:150,y:300,r:0},
-  {id:'yangjialing',name:'杨家岭',x:300,y:330,r:0},
-  {id:'nanniwan',name:'南泥湾',x:480,y:320,r:0},
-  {id:'wangjiaping',name:'王家坪',x:600,y:300,r:0},
-  {id:'fujian',name:'凤凰山麓',x:220,y:390,r:0},
-  {id:'wujiaozhen',name:'吴起镇',x:420,y:400,r:0},
-  {id:'huining',name:'会宁会师',x:560,y:400,r:0}
+  {id:'baota',name:'宝塔山',x:360,y:120},
+  {id:'zaoyuan',name:'枣园',x:150,y:300},
+  {id:'yangjialing',name:'杨家岭',x:300,y:330},
+  {id:'nanniwan',name:'南泥湾',x:480,y:320},
+  {id:'wangjiaping',name:'王家坪',x:600,y:300},
+  {id:'fujian',name:'凤凰山麓',x:220,y:390},
+  {id:'wujiaozhen',name:'吴起镇',x:420,y:400},
+  {id:'huining',name:'会宁会师',x:560,y:400}
 ];
 function startLights(){
   if(lightState.timer) clearInterval(lightState.timer);
   if(lightState.raf) cancelAnimationFrame(lightState.raf);
   lightState={lit:new Set(),timer:null,left:30,canvas:document.getElementById('lightCanvas'),ctx:null,raf:null,stars:[]};
   const cv=lightState.canvas; lightState.ctx=cv.getContext('2d');
-  // 星星
   for(let i=0;i<80;i++) lightState.stars.push({x:Math.random()*720,y:Math.random()*260,r:Math.random()*1.5+.5,tw:Math.random()*Math.PI*2});
   document.getElementById('lightTimer').textContent='⏱ 30s';
-  document.getElementById('lightScore').textContent=`💡 0 / ${KB.lights.length}`;
-  // 点击
+  document.getElementById('lightScore').textContent=`💡 0 / ${LIGHT_POINTS.length}`;
   cv.onclick=(e)=>{
     const rect=cv.getBoundingClientRect();
     const x=(e.clientX-rect.left)*(720/rect.width);
@@ -785,8 +681,8 @@ function startLights(){
       if(lightState.lit.has(p.id)) continue;
       if(Math.hypot(x-p.x,y-p.y)<28){
         lightState.lit.add(p.id);
-        document.getElementById('lightScore').textContent=`💡 ${lightState.lit.size} / ${KB.lights.length}`;
-        if(lightState.lit.size===KB.lights.length){ clearInterval(lightState.timer); endLights(); }
+        document.getElementById('lightScore').textContent=`💡 ${lightState.lit.size} / ${LIGHT_POINTS.length}`;
+        if(lightState.lit.size===LIGHT_POINTS.length){ clearInterval(lightState.timer); endLights(); }
         break;
       }
     }
@@ -800,61 +696,48 @@ function startLights(){
 }
 function drawLightScene(){
   const cv=lightState.canvas, ctx=lightState.ctx;
-  // 夜空
   const g=ctx.createLinearGradient(0,0,0,480);
   g.addColorStop(0,'#0b1a2e'); g.addColorStop(.6,'#1b3a5c'); g.addColorStop(1,'#2c4a6b');
   ctx.fillStyle=g; ctx.fillRect(0,0,720,480);
-  // 星星闪烁
   const t=Date.now()/600;
   lightState.stars.forEach(s=>{
     const a=.4+.6*Math.abs(Math.sin(s.tw+t));
     ctx.fillStyle=`rgba(255,255,255,${a})`;
     ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
   });
-  // 月亮
   ctx.fillStyle='#ffe9a8';
   ctx.beginPath();ctx.arc(620,70,30,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='rgba(255,233,168,.15)';
   ctx.beginPath();ctx.arc(620,70,55,0,Math.PI*2);ctx.fill();
-  // 远山
   ctx.fillStyle='#12263a';
   ctx.beginPath();ctx.moveTo(0,300);ctx.lineTo(120,180);ctx.lineTo(260,300);ctx.closePath();ctx.fill();
   ctx.beginPath();ctx.moveTo(200,300);ctx.lineTo(360,160);ctx.lineTo(520,300);ctx.closePath();ctx.fill();
   ctx.beginPath();ctx.moveTo(460,300);ctx.lineTo(620,190);ctx.lineTo(720,300);ctx.closePath();ctx.fill();
-  // 地面
   ctx.fillStyle='#0d1b2a'; ctx.fillRect(0,290,720,190);
   ctx.fillStyle='#132b40'; ctx.fillRect(0,300,720,180);
-  // 宝塔山轮廓
   ctx.fillStyle='#1f3b52';
   ctx.beginPath();ctx.moveTo(0,440);ctx.lineTo(180,300);ctx.lineTo(360,440);ctx.closePath();ctx.fill();
   ctx.beginPath();ctx.moveTo(320,440);ctx.lineTo(520,280);ctx.lineTo(720,440);ctx.closePath();ctx.fill();
-  // 宝塔本体
   drawNightTower(ctx,360,280,18,80,6,lightState.lit.has('baota'));
-  // 窑洞/旧址灯火
   LIGHT_POINTS.forEach(p=>{
     if(p.id==='baota') return;
     const lit=lightState.lit.has(p.id);
-    // 建筑小剪影
     ctx.fillStyle='#1a3348';
     ctx.fillRect(p.x-22,p.y-14,44,28);
     ctx.beginPath();ctx.moveTo(p.x-26,p.y-14);ctx.lineTo(p.x,p.y-30);ctx.lineTo(p.x+26,p.y-14);ctx.closePath();ctx.fill();
-    // 窗户
     ctx.fillStyle=lit?'#ffe082':'#2c4a6b';
     ctx.fillRect(p.x-6,p.y-6,12,10);
     if(lit){
       ctx.fillStyle='rgba(255,224,130,.25)';
       ctx.beginPath();ctx.arc(p.x,p.y-4,26,0,Math.PI*2);ctx.fill();
     }
-    // 名字
     ctx.fillStyle=lit?'#ffe082':'rgba(255,255,255,.5)';
     ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
     ctx.fillText(p.name,p.x,p.y+26);
   });
-  // 宝塔名字
   ctx.fillStyle=lightState.lit.has('baota')?'#ffe082':'rgba(255,255,255,.5)';
   ctx.font='bold 14px sans-serif'; ctx.textAlign='center';
   ctx.fillText('宝塔山',360,300);
-  // 底部提示
   ctx.fillStyle='rgba(255,255,255,.35)'; ctx.font='12px sans-serif';
   ctx.fillText('点击灯盏，点亮延安',360,465);
   lightState.raf=requestAnimationFrame(drawLightScene);
@@ -875,7 +758,7 @@ function drawNightTower(ctx,x,base,w,h,levels,lit){
 }
 function endLights(){
   if(lightState.raf) cancelAnimationFrame(lightState.raf);
-  const n=lightState.lit.size,total=KB.lights.length;
+  const n=lightState.lit.size,total=LIGHT_POINTS.length;
   const used=30-lightState.left;
   showPoster({
     game:'💡 宝塔山点灯',
@@ -884,16 +767,12 @@ function endLights(){
     quote: n===total?'星星之火，可以燎原！':'点亮星火，照亮奋斗路！',
     accent:'#0d1b2a',
     visual:(ctx,cx,cy)=>{
-      // 夜空 + 宝塔 + 灯火
       const g=ctx.createLinearGradient(0,cy-140,0,cy+140);
       g.addColorStop(0,'#0b1a2e');g.addColorStop(1,'#2c4a6b');
       ctx.fillStyle=g; ctx.fillRect(cx-260,cy-140,520,280);
-      // 星
       ctx.fillStyle='rgba(255,255,255,.8)';
       for(let i=0;i<40;i++){ ctx.beginPath();ctx.arc(cx-250+Math.random()*500,cy-130+Math.random()*180,Math.random()*1.6+.4,0,Math.PI*2);ctx.fill(); }
-      // 宝塔
       drawNightTower(ctx,cx,cy+90,20,90,6,n>0);
-      // 灯火点
       LIGHT_POINTS.forEach((p,i)=>{
         if(p.id==='baota') return;
         const lit=lightState.lit.has(p.id);
@@ -908,7 +787,6 @@ function endLights(){
   });
 }
 
-/* 初始化 */
 window.addEventListener('load',loadKB);
 </script>
 </body>
